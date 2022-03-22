@@ -25,7 +25,7 @@ if (settings == undefined) {
             `located at peer${settings.name} [${settings.id}]`);
     });
 } else {
-    
+    console.log("Join function not implemented yet.");
 }
 
 function parseSettings(args) {
@@ -48,7 +48,7 @@ function parseSettings(args) {
             port : peerParsed[1],
             id : singleton.getPeerID(peerParsed[0], peerParsed[1]),
             name : handler.getPeerCount()
-        }
+        };
     } 
     else {
         throw "Invalid args provided!";

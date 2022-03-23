@@ -36,8 +36,6 @@ function parseSettings(args) {
     }
     // parse the -p flag
     else if(args.length === 2) { //TODO: deal with version flag
-        console.log(`Attempting to join peer ${args[1]}`);
-
         const peerParsed = args[1].split(":");
 
         if (peerParsed.length != 2) 
@@ -67,10 +65,11 @@ function joinAndCreateNetwork(existingNetworkSettings) {
         port: existingNetworkSettings.port, 
         host: existingNetworkSettings.ip
     }, () => {
-        console.log(`[TEMP] Initiated connection to ` + 
+        console.log("Initiated connection to " + 
             `${existingNetworkSettings.ip}:${existingNetworkSettings.port}`);
 
-        createNetwork(clientSocket.localPort, clientSocket.localAddress);
+        createNetwork(clientSocket.localPort, clientSocket.localAddress, 
+            existingNetworkSettings);
     });
 
     // When receiving data
@@ -87,7 +86,8 @@ function joinAndCreateNetwork(existingNetworkSettings) {
  * @param {net.Socket} serverSocket 
  * @returns returns the settings object for the newly created server
  */
- function createNetwork(port = 0, host = "127.0.0.1") {
+ function createNetwork(port = 0, host = "127.0.0.1", 
+    existingNetworkSettings = undefined) {
     const serverSocket = net.createServer();
 
     // assign a random port or use one provided and listen on it
@@ -98,7 +98,7 @@ function joinAndCreateNetwork(existingNetworkSettings) {
             id : singleton.getPeerID(host, serverSocket.address().port),
             name : path.basename(process.cwd())
         };
-        handler.init(settings);
+        handler.init(settings, existingNetworkSettings);
 
         console.log(`This peer address is ${settings.ip}:${settings.port} ` + 
             `located at ${settings.name} [${settings.id}]`);

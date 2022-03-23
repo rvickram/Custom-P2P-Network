@@ -1,3 +1,5 @@
+/* By: Ryan Vickramasinghe */
+const singleton = require("../utils/Singleton");
 
 class KADPacket {
     constructor(version = undefined, messageType = undefined, numPeers = undefined,
@@ -34,9 +36,10 @@ class KADPacket {
     //     return this.packet.header.senderName;
     // }
 
-    getPacketBits() {
+    getPacketBytes() {
+        const lenSenderName = this.packet.header.lenSenderName;
         let packetBits = {
-            header: new Uint8Array(8),
+            header: new Uint8Array(8 + lenSenderName),
             payload: undefined
         }
 
@@ -44,9 +47,23 @@ class KADPacket {
         storeBitPacket(packetBits.header, this.packet.header.messageType, 4, 12);
         storeBitPacket(packetBits.header, this.packet.header.numPeers, 12, 20);
 
-        const lenSenderName = this.packet.header.lenSenderName;
         storeBitPacket(packetBits.header, lenSenderName, 20, 32);
         storeBitPacket(packetBits.header, this.packet.header.senderName, 32, 32 + lenSenderName);
+
+        if (this.packet.payload != undefined) {
+            packetBits.payload = new Uint8Array(this.packet.header.numPeers * 6);
+
+            for (let i = 0; i < this.packet.payload.length; i++) {
+                const bucket = this.packet.payload[i];
+
+                const offset = i*6;
+                storeBitPacket(packetBits.payload, bucket.ip, offset, 4 + offset);
+                storeBitPacket(packetBits.payload, bucket.port, 4 + offset, 6 + offset);
+            }
+        }
+
+        return (packetBits.payload == undefined) ?
+            packetBits.header : new Uint8Array([...packetBits.header, ...packetBits.payload]);
     }
 
 }
@@ -73,7 +90,7 @@ function parseRawPacket(rawPacket) {
 
 function getLenSenderName(senderName) {
     const senderNameBytes = stringToBytes(senderName);
-    return senderNameBytes * 8;
+    return senderNameBytes.length * 8;
 }
 
 // Returns the integer value of the extracted bits fragment for a given packet

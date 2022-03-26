@@ -37,24 +37,55 @@ module.exports = {
         // add to bucket
         const newPeer = {
             ip: socket.remoteAddress,
-            port: socket.remotePort,
-            id: singleton.getPeerID(socket.remoteAddress, socket.remotePort)
+            port: parseInt(socket.remotePort),
+            id: singleton.getPeerID(socket.remoteAddress, parseInt(socket.remotePort))
         };
         pushBucket(dht, newPeer);
 
         // create welcome packet
+        const peerData = dht.filter(val => val != undefined && val.id != newPeer.id);
         const welcomePacket = new KADPacket({
             version: 7,
             messageType: 1,
-            numPeers: peerCount,
+            numPeers: peerData.length,
             senderName: config.name,
-            peerData: dht.filter(val => val != undefined)
+            peerData: peerData
         });
         socket.write(welcomePacket.getPacketBytes());
 
         socket.end();
+    },
+
+    handleUpdate: function (clientSocket) {
+        // When receiving data
+        clientSocket.on("data", (data) => {
+            // parse the raw packet
+            const packet = new KADPacket({ rawPacket: data });
+
+            // check version and to see if there are even any peers
+            if (packet.getVersion() == 7) {
+                refreshBucket(dht, packet.getPeers());
+            }
+        });
+
+        // when remote endpoint closed connection
+        clientSocket.on("close", (hadError) => {
+            console.log("Connection was closed by " + clientSocket.remoteAddress +
+                ":" + clientSocket.remotePort);
+            clientSocket.end();
+        });
     }
 };
+
+function refreshBucket(dht, newPeers) {
+    for (let i = 0; i < newPeers.length; i++) {
+        newPeers[i].id = singleton.getPeerID(newPeers.ip, newPeers.port);
+        if (newPeers[i].id == config.id) continue;
+        pushBucket(dht, newPeers[i]);
+    }
+
+    console.log("Refresh k-bucket operation is performed.\n\n" + "My DHT: ", dht.filter(val => val != undefined));
+}
 
 
 /**

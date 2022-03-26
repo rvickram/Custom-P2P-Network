@@ -44,8 +44,8 @@ function parseSettings(args) {
 
         return {
             ip : peerParsed[0],
-            port : peerParsed[1],
-            id : singleton.getPeerID(peerParsed[0], peerParsed[1]),
+            port : parseInt(peerParsed[1]),
+            id : singleton.getPeerID(peerParsed[0], parseInt(peerParsed[1])),
             name : path.basename(process.cwd())
         };
     } 
@@ -73,18 +73,7 @@ function joinAndCreateNetwork(existingNetworkSettings) {
             existingNetworkSettings);
     });
 
-
-    // TODO: Move below to the Peer Handler (so that we can update DHT)
-    // When receiving data
-    clientSocket.on("data", (data) => {
-        const packet = new KADPacket({rawPacket: data});
-        console.log("Received welcome packet");
-    });
-
-    clientSocket.on("close", (hadError) => {
-        console.log("Connection was closed by " + clientSocket.remoteAddress + 
-            ":" + clientSocket.remotePort);
-    });
+    handler.handleUpdate(clientSocket);
 }
 
 
@@ -102,8 +91,8 @@ function joinAndCreateNetwork(existingNetworkSettings) {
     serverSocket.listen(port, host, function() {
         const settings = {
             ip : host,
-            port : serverSocket.address().port,
-            id : singleton.getPeerID(host, serverSocket.address().port),
+            port : parseInt(serverSocket.address().port),
+            id : singleton.getPeerID(host, parseInt(serverSocket.address().port)),
             name : path.basename(process.cwd())
         };
         handler.init(settings, existingNetworkSettings);

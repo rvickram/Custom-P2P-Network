@@ -20,21 +20,25 @@ class KADPacket {
         console.log("\nLoaded packet: ", this.packet);
     }
 
-    // getVersion() {
-    //     return this.packet.header.version;
-    // }
+    getVersion() {
+        return this.packet.header.version;
+    }
 
-    // getMessageType() {
-    //     return this.packet.header.messageType;
-    // }
+    getMessageType() {
+        return this.packet.header.messageType;
+    }
 
-    // getNumPeers() {
-    //     return this.packet.header.messageType;
-    // }
+    getNumPeers() {
+        return this.packet.header.numPeers;
+    }
 
-    // getSenderName() {
-    //     return this.packet.header.senderName;
-    // }
+    getSenderName() {
+        return this.packet.header.senderName;
+    }
+
+    getPeers() {
+        return this.packet.payload;
+    }
 
     getPacketBytes() {
         let packetBits = {
@@ -90,9 +94,9 @@ function parseRawPacket(rawPacket) {
     packet.header.senderName = bytesToString(rawPacket.slice(4, 4 + Math.ceil(packet.header.lenSenderName / 8)));
 
     // parse out the payload based on numPeers
+    packet.payload = [];
     if (packet.header.numPeers > 0) {
         const rawPayload = rawPacket.slice(4 + Math.ceil(packet.header.lenSenderName / 8));
-        packet.payload = [];
 
         for (let i = 0; i < packet.header.numPeers; i++) {
             const offset = i * 6;

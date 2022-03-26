@@ -1,23 +1,23 @@
 /* By: Ryan Vickramasinghe */
-const singleton = require("../utils/Singleton");
 
 class KADPacket {
-    constructor(version = undefined, messageType = undefined, numPeers = undefined,
-        senderName = undefined, peerData = undefined, rawPacket = undefined) {
-        if (rawPacket != undefined) {
-            this.packet = parseRawPacket(rawPacket);
+    constructor(packet) {
+        if (packet.rawPacket) {
+            this.packet = parseRawPacket(packet.rawPacket);
         } else {
             this.packet = {
                 header: {
-                    version: version,
-                    messageType: messageType,
-                    numPeers: numPeers,
-                    lenSenderName: getLenSenderName(senderName),
-                    senderName: senderName,
+                    version: packet.version,
+                    messageType: packet.messageType,
+                    numPeers: packet.numPeers,
+                    lenSenderName: getLenSenderNameBits(packet.senderName),
+                    senderName: packet.senderName,
                 },
-                payload: peerData
+                payload: packet.peerData
             }
         }
+
+        console.log("\nLoaded packet: ", this.packet);
     }
 
     // getVersion() {
@@ -37,28 +37,32 @@ class KADPacket {
     // }
 
     getPacketBytes() {
-        const lenSenderName = this.packet.header.lenSenderName;
         let packetBits = {
-            header: new Uint8Array(8 + lenSenderName),
+            header: new Uint8Array(4),
             payload: undefined
         }
 
         storeBitPacket(packetBits.header, this.packet.header.version, 0, 4);
-        storeBitPacket(packetBits.header, this.packet.header.messageType, 4, 12);
-        storeBitPacket(packetBits.header, this.packet.header.numPeers, 12, 20);
+        storeBitPacket(packetBits.header, this.packet.header.messageType, 4, 8);
+        storeBitPacket(packetBits.header, this.packet.header.numPeers, 12, 8);
+        storeBitPacket(packetBits.header, this.packet.header.lenSenderName, 20, 12);
 
-        storeBitPacket(packetBits.header, lenSenderName, 20, 32);
-        storeBitPacket(packetBits.header, this.packet.header.senderName, 32, 32 + lenSenderName);
+        // append the senderName to the header
+        const senderNameBytes = new Uint8Array(stringToBytes(this.packet.header.senderName));
+        packetBits.header = new Uint8Array([...packetBits.header, ...senderNameBytes]);
 
+        // handle the payload conversion
         if (this.packet.payload != undefined) {
-            packetBits.payload = new Uint8Array(this.packet.header.numPeers * 6);
+            packetBits.payload = new Uint8Array(0);
 
             for (let i = 0; i < this.packet.payload.length; i++) {
                 const bucket = this.packet.payload[i];
 
-                const offset = i*6;
-                storeBitPacket(packetBits.payload, bucket.ip, offset, 4 + offset);
-                storeBitPacket(packetBits.payload, bucket.port, 4 + offset, 6 + offset);
+                const ipArray = new Uint8Array(bucket.ip.split("."));
+                packetBits.payload = new Uint8Array([...packetBits.payload, ...ipArray]);
+                const portArray = new Uint8Array(2);
+                storeBitPacket(portArray, parseInt(bucket.port), 0, 16);
+                packetBits.payload = new Uint8Array([...packetBits.payload, ...portArray]);
             }
         }
 
@@ -77,18 +81,35 @@ function parseRawPacket(rawPacket) {
     const packet = {
         header: {
             version: parseBitPacket(rawPacket, 0, 4),
-            messageType: parseBitPacket(rawPacket, 4, 12),
-            numPeers: parseBitPacket(rawPacket, 12, 20),
-            lenSenderName: parseBitPacket(rawPacket, 20, 32),
+            messageType: parseBitPacket(rawPacket, 4, 8),
+            numPeers: parseBitPacket(rawPacket, 12, 8),
+            lenSenderName: parseBitPacket(rawPacket, 20, 12),
         },
-        payload: bytesToString(rawPacket.slice(12))
+        payload: undefined
     }
-    packet.header.senderName = parseBitPacket(rawPacket, 32, 32 + packet.header.lenSenderName);
+    packet.header.senderName = bytesToString(rawPacket.slice(4, 4 + Math.ceil(packet.header.lenSenderName / 8)));
+
+    // parse out the payload based on numPeers
+    if (packet.header.numPeers > 0) {
+        const rawPayload = rawPacket.slice(4 + Math.ceil(packet.header.lenSenderName / 8));
+        packet.payload = [];
+
+        for (let i = 0; i < packet.header.numPeers; i++) {
+            const offset = i * 6;
+
+            const newPeer = {
+                ip: rawPayload.slice(offset, 4 + offset).join("."),
+                port: parseBitPacket(rawPayload, offset * 8 + 32, 16)
+            }
+
+            packet.payload.push(newPeer);
+        }
+    }
 
     return packet;
 }
 
-function getLenSenderName(senderName) {
+function getLenSenderNameBits(senderName) {
     const senderNameBytes = stringToBytes(senderName);
     return senderNameBytes.length * 8;
 }

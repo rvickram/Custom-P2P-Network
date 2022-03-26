@@ -3,6 +3,7 @@ const net = require("net");
 const singleton = require("./utils/Singleton");
 const path = require('path'); 
 const handler = require("./utils/PeerHandler");
+const KADPacket = require("./packetbuilder/KADPacket");
 
 // first parse the arguments provided
 let existingNetworkSettings = parseSettings(process.argv.slice(2));
@@ -72,10 +73,17 @@ function joinAndCreateNetwork(existingNetworkSettings) {
             existingNetworkSettings);
     });
 
+
+    // TODO: Move below to the Peer Handler (so that we can update DHT)
     // When receiving data
     clientSocket.on("data", (data) => {
-        //TODO: parsed the received kadPTP welcome message
-        console.log("Received welcome");
+        const packet = new KADPacket({rawPacket: data});
+        console.log("Received welcome packet");
+    });
+
+    clientSocket.on("close", (hadError) => {
+        console.log("Connection was closed by " + clientSocket.remoteAddress + 
+            ":" + clientSocket.remotePort);
     });
 }
 

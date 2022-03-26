@@ -43,9 +43,13 @@ module.exports = {
         pushBucket(dht, newPeer);
 
         // create welcome packet
-        const welcomePacket = new KADPacket(
-            7, 1, peerCount, config.name, dht.filter(val => val != undefined)
-        );
+        const welcomePacket = new KADPacket({
+            version: 7,
+            messageType: 1,
+            numPeers: peerCount,
+            senderName: config.name,
+            peerData: dht.filter(val => val != undefined)
+        });
         socket.write(welcomePacket.getPacketBytes());
 
         socket.end();

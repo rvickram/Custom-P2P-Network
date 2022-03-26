@@ -42,7 +42,7 @@ module.exports = {
         };
         pushBucket(dht, newPeer);
 
-        // create welcome packet
+        // create welcome packet (don't send the DHT entry containing the new peer)
         const peerData = dht.filter(val => val != undefined && val.id != newPeer.id);
         const welcomePacket = new KADPacket({
             version: 7,
@@ -64,7 +64,12 @@ module.exports = {
 
             // check version and to see if there are even any peers
             if (packet.getVersion() == 7) {
-                refreshBucket(dht, packet.getPeers());
+                // if this is a welcome packet, parse the peers
+                if (packet.getMessageType() == 1) {
+                    console.log(`\nReceived welcome packet from ${packet.getSenderName()}\n` +
+                        "along with DHT: " + packet.printPeersAsString());
+                    refreshBucket(dht, packet.getPeers());
+                }
             }
         });
 
@@ -80,7 +85,6 @@ module.exports = {
 function refreshBucket(dht, newPeers) {
     for (let i = 0; i < newPeers.length; i++) {
         newPeers[i].id = singleton.getPeerID(newPeers.ip, newPeers.port);
-        if (newPeers[i].id == config.id) continue;
         pushBucket(dht, newPeers[i]);
     }
 
@@ -112,8 +116,6 @@ function pushBucket(dht, newPeer) {
         updateBucket(dht, newPeer, 0);
         peerCount++;
     }
-
-    console.log("\nHexID=" + newPeer.id + "\n\tBinary ID=" + newPeerIdBits + "\n\tlength=" + newPeerIdBits.length);
 }
 
 

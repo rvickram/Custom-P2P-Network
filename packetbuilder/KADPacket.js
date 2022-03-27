@@ -1,6 +1,5 @@
 /* By: Ryan Vickramasinghe */
-
-const Singleton = require("../utils/Singleton");
+const singleton = require("../utils/Singleton");
 
 class KADPacket {
     constructor(packet) {
@@ -19,7 +18,7 @@ class KADPacket {
             }
         }
 
-        console.log("\n[TEMP] Loaded packet: ", this.packet);
+        // console.log("\n[TEMP] Loaded packet: ", this.packet);
     }
 
     getVersion() {
@@ -47,7 +46,7 @@ class KADPacket {
         if (this.packet.payload.length < 1) return "[]";
 
         for (let i = 0; i < this.packet.payload.length; i++) {
-            const id = Singleton.getPeerID(this.packet.payload[i].ip, this.packet.payload[i].port);
+            const id = singleton.getPeerID(this.packet.payload[i].ip, this.packet.payload[i].port);
             str += `[${this.packet.payload[i].ip}:${this.packet.payload[i].port}, ${id}]\n`
         }
 

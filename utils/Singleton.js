@@ -36,10 +36,10 @@ module.exports = {
     //getPeerID: takes the IP and port number and returns 20 bytes Hex number
     //--------------------------
     getPeerID: function (IP, port) {
-        var crypto = require('crypto')
-        var sha1 = crypto.createHash('sha1')
-        sha1.update(IP + ':' + port)
-        return sha1.digest('hex')
+        var crypto = require('crypto');
+        var sha1 = crypto.createHash('sha1');
+        sha1.update(IP + ':' + parseInt(port));
+        return sha1.digest('hex');
     },
 
     //--------------------------
